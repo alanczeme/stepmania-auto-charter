@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+config.json
+/work/
+/StepMania Exports/
+.DS_Store

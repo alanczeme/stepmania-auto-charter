@@ -1,0 +1,10 @@
+{
+  "spotify_client_id": "your-spotify-client-id",
+  "spotify_client_secret": "your-spotify-client-secret",
+  "autostepper_path": "/Users/you/tools/AutoStepper-Python",
+  "autostepper_python": "/Users/you/tools/AutoStepper-Python/venv/bin/python",
+  "export_dir": "~/StepMania Exports",
+  "stepmania_songs_dir": "",
+  "review_port": 0,
+  "review_reminder_seconds": 300
+}
