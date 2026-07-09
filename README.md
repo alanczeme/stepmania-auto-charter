@@ -14,8 +14,12 @@ python generate.py "<link>"
 
 ## Setup
 
-1. **Python 3.9+** and these packages:
+1. **Git Clone repo, cd into repo, start virtual env, install Python 3.9+** and these packages:
    ```
+   git clone <your-repo-url>
+   cd <repo-folder-name>
+   python3 -m venv venv
+   source venv/bin/activate
    pip install -r requirements.txt
    ```
 2. **yt-dlp** and **ffmpeg**:
