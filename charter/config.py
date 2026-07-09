@@ -27,6 +27,7 @@ class Config:
     stepmania_songs_dir: Optional[str] = None
     review_port: int = 0
     review_reminder_seconds: int = 300
+    chart_timeout_seconds: int = 1800
 
     def require_spotify(self) -> None:
         if not self.spotify_client_id or not self.spotify_client_secret:
@@ -73,6 +74,7 @@ def load_config() -> Config:
         stepmania_songs_dir=data.get("stepmania_songs_dir"),
         review_port=int(data.get("review_port", 0)),
         review_reminder_seconds=int(data.get("review_reminder_seconds", 300)),
+        chart_timeout_seconds=int(data.get("chart_timeout_seconds", 1800)),
     )
 
     cfg.spotify_client_id = os.environ.get("SPOTIFY_CLIENT_ID", cfg.spotify_client_id)
@@ -88,6 +90,8 @@ def load_config() -> Config:
     cfg.stepmania_songs_dir = os.environ.get(
         "STEPMANIA_SONGS_DIR", cfg.stepmania_songs_dir
     )
+    if os.environ.get("CHART_TIMEOUT_SECONDS"):
+        cfg.chart_timeout_seconds = int(os.environ["CHART_TIMEOUT_SECONDS"])
 
     cfg.export_dir.mkdir(parents=True, exist_ok=True)
     return cfg

@@ -104,9 +104,14 @@ def process_song(song: Song, cfg: Config, autostepper_script: str, workers: Opti
             return
         song.status = "downloaded"
 
+        print("  downloaded, now charting (can take several minutes)...")
         try:
             chart_folder, scratch_dir = charting.generate_chart(
-                audio_path, autostepper_script, cfg.autostepper_python, workers=workers
+                audio_path,
+                autostepper_script,
+                cfg.autostepper_python,
+                workers=workers,
+                timeout_seconds=cfg.chart_timeout_seconds,
             )
         except charting.ChartingError as e:
             song.status, song.error = "failed", str(e)
@@ -165,6 +170,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="AutoStepper --workers passthrough (e.g. -1 for all cores)",
     )
     args = parser.parse_args(argv)
+    args.link = urls.clean(args.link)
 
     try:
         cfg = load_config()

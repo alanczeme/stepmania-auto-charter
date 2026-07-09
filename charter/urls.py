@@ -11,9 +11,17 @@ class UnrecognizedLinkError(ValueError):
     pass
 
 
+def clean(url: str) -> str:
+    """Undo shell-escaping artifacts (zsh commonly backslash-escapes ?, &, =
+    in pasted URLs). A raw backslash is never valid in a URL, so it's always
+    safe to strip.
+    """
+    return url.strip().replace("\\", "")
+
+
 def classify(url: str) -> str:
     """Return one of: youtube_video, youtube_playlist, spotify_track, spotify_playlist."""
-    parsed = urlparse(url.strip())
+    parsed = urlparse(clean(url))
     host = parsed.netloc.lower()
 
     if host in YOUTUBE_HOSTS:
@@ -49,7 +57,7 @@ def classify(url: str) -> str:
 
 
 def spotify_id(url: str) -> str:
-    parsed = urlparse(url.strip())
+    parsed = urlparse(clean(url))
     parts = [p for p in parsed.path.split("/") if p]
     # last path segment is the id; strip any trailing query-string artifacts
     return parts[-1].split("?")[0]

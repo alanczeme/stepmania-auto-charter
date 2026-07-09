@@ -17,11 +17,18 @@ class ChartingError(Exception):
     pass
 
 
+def _tail(text: Optional[str], lines: int = 15) -> str:
+    if not text or not text.strip():
+        return ""
+    return "\n".join(text.strip().splitlines()[-lines:])
+
+
 def generate_chart(
     audio_path: Path,
     autostepper_script: str,
     autostepper_python: str,
     workers: Optional[int] = None,
+    timeout_seconds: int = 1800,
 ) -> Tuple[Path, Path]:
     """Run AutoStepper on a single audio file.
 
@@ -49,15 +56,21 @@ def generate_chart(
         cmd.append(f"--workers={workers}")
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
     except subprocess.TimeoutExpired as e:
         shutil.rmtree(scratch_dir, ignore_errors=True)
-        raise ChartingError(f"AutoStepper timed out charting {audio_path.name}") from e
+        tail = _tail(e.stdout) or _tail(e.stderr) or "(no output captured)"
+        raise ChartingError(
+            f"AutoStepper timed out after {timeout_seconds}s charting {audio_path.name}. "
+            f"This can be a slow-but-legitimate run (first invocation pays a librosa/numba "
+            f"warmup cost) -- raise chart_timeout_seconds in config.json if it's consistently "
+            f"this slow. Last output before timeout:\n{tail}"
+        ) from e
 
     if proc.returncode != 0:
         shutil.rmtree(scratch_dir, ignore_errors=True)
-        tail = proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else "unknown error"
-        raise ChartingError(f"AutoStepper failed on {audio_path.name}: {tail}")
+        tail = _tail(proc.stderr) or _tail(proc.stdout) or "unknown error"
+        raise ChartingError(f"AutoStepper failed on {audio_path.name}:\n{tail}")
 
     sm_files = list(out_dir.rglob("*.sm"))
     if not sm_files:

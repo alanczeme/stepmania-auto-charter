@@ -6,5 +6,6 @@
   "export_dir": "~/StepMania Exports",
   "stepmania_songs_dir": "",
   "review_port": 0,
-  "review_reminder_seconds": 300
+  "review_reminder_seconds": 300,
+  "chart_timeout_seconds": 1800
 }
