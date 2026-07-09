@@ -1,5 +1,89 @@
 # StepMania Auto-Charter
 
+## Setup from scratch (macOS)
+
+New to this project? Run these in order in Terminal.
+
+**1. Install Homebrew** (skip if `brew -v` already prints a version):
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+**2. Install Python 3:**
+```bash
+brew install python
+```
+macOS doesn't always have a bare `pip` command — use `pip3` below if `pip` isn't found.
+
+**3. Clone this repo and cd into it** — it lives on GitHub; there's nothing to run until it's on your machine:
+```bash
+git clone https://github.com/alanczeme/stepmania-auto-charter.git
+cd stepmania-auto-charter
+```
+
+**4. Create and activate a virtual environment:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+This avoids the "externally-managed-environment" error Homebrew's Python throws on a global `pip install`; you'll need to re-run `source venv/bin/activate` every new terminal session before running anything in this project.
+
+**5. Install this project's Python dependencies** (only installs correctly with the venv active):
+```bash
+pip install -r requirements.txt
+```
+
+**6. Install the external command-line tools this project shells out to** (these aren't Python packages, so they're not in requirements.txt):
+```bash
+brew install yt-dlp ffmpeg
+```
+
+**7. Set up AutoStepper-Python.** This repo does not vendor it — it's a separate tool called over subprocess, so it needs its own clone and its own venv:
+```bash
+cd ..
+git clone https://github.com/bkeath/Autostepper-Python.git
+cd Autostepper-Python
+python3 -m venv venv
+source venv/bin/activate
+pip install numpy librosa soundfile fire pydub
+deactivate
+cd ../stepmania-auto-charter
+```
+Note the full path to this `Autostepper-Python` folder and to its `venv/bin/python` — both are needed in the next step as `autostepper_path` and `autostepper_python`.
+
+**8. Set up your config file:**
+```bash
+mkdir -p ~/.config/stepmania-auto-charter
+cp config.example.json ~/.config/stepmania-auto-charter/config.json
+nano ~/.config/stepmania-auto-charter/config.json
+```
+(`nano` is a simple terminal text editor — edit the values, then `Ctrl+O`, `Enter` to save, `Ctrl+X` to exit.)
+
+Fields in that file:
+- `spotify_client_id` / `spotify_client_secret` — from a free app at https://developer.spotify.com/dashboard (Dashboard → Create app → Settings shows both)
+- `autostepper_path` — full path to the `Autostepper-Python` folder from step 7 (the one containing `AutoStepper.py`)
+- `autostepper_python` — full path to `Autostepper-Python/venv/bin/python` from step 7
+- `export_dir` — where finished song folders get saved; `~/StepMania Exports` is fine as-is
+- `stepmania_songs_dir` — optional; point at a local StepMania install's `Songs/` folder to auto-copy output there, or leave `""` to skip
+- `review_port` — local port for the Phase 2 review page; `0` auto-picks a free port, leave as-is
+- `review_reminder_seconds` — how often (seconds) to print a reminder if the review page is left open unconfirmed; `300` is fine as-is
+
+**9. Verify the setup:**
+```bash
+python generate.py --help
+```
+If that prints usage instead of an error, the venv and dependencies are wired up correctly.
+
+**10. Returning later**, every new terminal session just needs:
+```bash
+cd stepmania-auto-charter
+source venv/bin/activate
+python generate.py "<link>"
+```
+The venv doesn't stay active between sessions — reactivate it before every run.
+
+## About
+
 Personal command-line tool for macOS. Give it a YouTube video/playlist link
 or a Spotify track/playlist link; it downloads audio, auto-generates a
 5-difficulty StepMania chart, and packages a ready-to-drop-in song folder.
@@ -11,39 +95,6 @@ or charting starts.
 ```
 python generate.py "<link>"
 ```
-
-## Setup
-
-1. **Python 3.9+** and these packages:
-   ```
-   pip install -r requirements.txt
-   ```
-2. **yt-dlp** and **ffmpeg**:
-   ```
-   brew install yt-dlp ffmpeg
-   ```
-3. **AutoStepper-Python** (the actual chart generator) — clone it somewhere
-   and set up its own venv per its README:
-   ```
-   git clone https://github.com/bkeath/Autostepper-Python.git
-   ```
-4. **Spotify Developer app** (only needed for Spotify links) — create a free
-   app at https://developer.spotify.com/dashboard for a Client ID/Secret.
-   No elevated scopes required; this only ever calls `search` / `get track`
-   / `get playlist items` metadata endpoints.
-5. Copy `config.example.json` to `~/.config/stepmania-auto-charter/config.json`
-   and fill in:
-   - `spotify_client_id` / `spotify_client_secret`
-   - `autostepper_path` — folder containing `AutoStepper.py`
-   - `autostepper_python` — path to the Python interpreter in AutoStepper's
-     venv (or just `python3` if it's on PATH with its deps installed)
-   - `export_dir` — defaults to `~/StepMania Exports`
-   - `stepmania_songs_dir` — optional, auto-copies output into a local
-     StepMania install's `Songs/` folder
-
-   All of these can also be set via environment variables
-   (`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `AUTOSTEPPER_PATH`,
-   `AUTOSTEPPER_PYTHON`, `STEPMANIA_EXPORT_DIR`, `STEPMANIA_SONGS_DIR`).
 
 ## Usage
 
