@@ -10,15 +10,19 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 
 class ChartingError(Exception):
     pass
 
 
-def _tail(text: Optional[str], lines: int = 15) -> str:
-    if not text or not text.strip():
+def _tail(text: Union[str, bytes, None], lines: int = 15) -> str:
+    if not text:
+        return ""
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", errors="replace")
+    if not text.strip():
         return ""
     return "\n".join(text.strip().splitlines()[-lines:])
 
