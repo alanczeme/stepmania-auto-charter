@@ -138,7 +138,15 @@ def _spotify_song(track: dict, source: str, group: str, cfg: Config) -> Song:
     return song
 
 
-def process_song(song: Song, cfg: Config, autostepper_script: str, workers: Optional[int]) -> None:
+def process_song(
+    song: Song,
+    cfg: Config,
+    autostepper_script: str,
+    workers: Optional[int],
+    bpm_override: Optional[float] = None,
+    offset_override: Optional[float] = None,
+    synctime: Optional[float] = None,
+) -> None:
     target = packaging.target_dir(cfg.export_dir, song.group, song.title)
     if packaging.already_done(target):
         song.status = "skipped"
@@ -171,6 +179,9 @@ def process_song(song: Song, cfg: Config, autostepper_script: str, workers: Opti
                 cfg.autostepper_python,
                 workers=workers,
                 timeout_seconds=cfg.chart_timeout_seconds,
+                bpm_override=bpm_override,
+                offset_override=offset_override,
+                synctime=synctime,
             )
         except charting.ChartingError as e:
             song.status, song.error = "failed", str(e)
@@ -229,6 +240,30 @@ def main(argv: Optional[List[str]] = None) -> int:
         type=int,
         default=None,
         help="AutoStepper --workers passthrough (e.g. -1 for all cores)",
+    )
+    parser.add_argument(
+        "--bpm-override",
+        type=float,
+        default=None,
+        help=(
+            "Force one flat BPM for every song charted this run, instead of "
+            "AutoStepper's own tempo detection (which can be noisy/jittery on "
+            "non-electronic material). Look up the song's real BPM first "
+            "(e.g. tunebat.com/songbpm.com) -- meant for re-charting one "
+            "specific song, not a whole playlist."
+        ),
+    )
+    parser.add_argument(
+        "--offset-override",
+        type=float,
+        default=None,
+        help="Force this exact StepMania #OFFSET instead of AutoStepper's auto-aligned one.",
+    )
+    parser.add_argument(
+        "--synctime",
+        type=float,
+        default=None,
+        help="Nudge AutoStepper's auto-aligned offset earlier/later by this many seconds.",
     )
     args = parser.parse_args(argv)
     args.link = urls.clean(args.link)
@@ -290,7 +325,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     total = len(queue)
     for i, song in enumerate(queue, start=1):
         print(f'[{i}/{total}] Charting "{song.title}"...')
-        process_song(song, cfg, autostepper_script, args.workers)
+        process_song(
+            song,
+            cfg,
+            autostepper_script,
+            args.workers,
+            bpm_override=args.bpm_override,
+            offset_override=args.offset_override,
+            synctime=args.synctime,
+        )
         if i < total:
             time.sleep(DOWNLOAD_DELAY_SECONDS)
 

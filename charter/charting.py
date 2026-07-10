@@ -33,6 +33,9 @@ def generate_chart(
     autostepper_python: str,
     workers: Optional[int] = None,
     timeout_seconds: int = 1800,
+    bpm_override: Optional[float] = None,
+    offset_override: Optional[float] = None,
+    synctime: Optional[float] = None,
 ) -> Tuple[Path, Path]:
     """Run AutoStepper on a single audio file.
 
@@ -63,6 +66,14 @@ def generate_chart(
     ]
     if workers is not None:
         cmd.append(f"--workers={workers}")
+    if bpm_override is not None:
+        # Forces one flat BPM for the whole chart instead of AutoStepper's
+        # own (often noisy/jittery) per-song tempo detection.
+        cmd.append(f"--bpm_override={bpm_override}")
+    if offset_override is not None:
+        cmd.append(f"--offset_override={offset_override}")
+    if synctime is not None:
+        cmd.append(f"--synctime={synctime}")
 
     try:
         proc = subprocess.run(
