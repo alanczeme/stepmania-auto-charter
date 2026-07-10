@@ -102,31 +102,27 @@ class SpotifyClient:
         }
 
     def get_playlist_items(self, playlist_id: str) -> Iterator[dict]:
-        fields = "items(track(id,name,artists,duration_ms)),next"
-        first_page = self._get(
-            f"/playlists/{playlist_id}/items", params={"limit": 100, "fields": fields}
-        )
+        # No `fields` filter here -- confirmed by a raw response dump that the
+        # /items endpoint (Feb 2026 rename of /tracks) nests the track object
+        # under the key "item", not "track" as it used to; a `fields` filter
+        # asking for "track(...)" silently matched nothing. Fetching the full
+        # object and checking both key names sidesteps needing to trust any
+        # particular field-name assumption again.
+        first_page = self._get(f"/playlists/{playlist_id}/items", params={"limit": 100})
         if not first_page.get("items"):
-            # /items is a Feb 2026 rename of /tracks I couldn't independently verify
-            # against Spotify's own docs (blocked from this environment) -- if it comes
-            # back empty, fall back to the endpoint that's been stable for years rather
-            # than assume the playlist is actually empty.
-            first_page = self._get(
-                f"/playlists/{playlist_id}/tracks", params={"limit": 100, "fields": fields}
-            )
+            first_page = self._get(f"/playlists/{playlist_id}/tracks", params={"limit": 100})
 
-        url = None
         page = first_page
         while True:
-            for item in page.get("items", []):
-                track = item.get("track")
+            for entry in page.get("items", []):
+                track = entry.get("item") or entry.get("track")
                 if not track or not track.get("id"):
                     continue  # local files / removed tracks have no id
                 yield _track_summary(track)
-            url = page.get("next")
-            if not url:
+            next_url = page.get("next")
+            if not next_url:
                 return
-            page = self._get_url(url)
+            page = self._get_url(next_url)
 
     def debug_raw_items_page(self, playlist_id: str) -> str:
         """Unfiltered dump of the first items page, for diagnosing an
