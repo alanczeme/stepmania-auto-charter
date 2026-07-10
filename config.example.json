@@ -8,5 +8,6 @@
   "review_port": 0,
   "review_reminder_seconds": 300,
   "chart_timeout_seconds": 1800,
-  "yt_dlp_cookies_from_browser": ""
+  "yt_dlp_cookies_from_browser": "",
+  "spotify_redirect_uri": "http://127.0.0.1:8899/callback"
 }

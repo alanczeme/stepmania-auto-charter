@@ -29,6 +29,7 @@ class Config:
     review_reminder_seconds: int = 300
     chart_timeout_seconds: int = 1800
     yt_dlp_cookies_from_browser: Optional[str] = None
+    spotify_redirect_uri: str = "http://127.0.0.1:8899/callback"
 
     def require_spotify(self) -> None:
         if not self.spotify_client_id or not self.spotify_client_secret:
@@ -37,7 +38,10 @@ class Config:
                 "https://developer.spotify.com/dashboard and set spotify_client_id / "
                 "spotify_client_secret in "
                 f"{CONFIG_PATH} (or the SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET "
-                "environment variables)."
+                "environment variables). For playlist links, also add "
+                f"{self.spotify_redirect_uri} as a Redirect URI in that app's "
+                "Settings -- Spotify requires an exact match, and playlist reads "
+                "now need a one-time browser login there."
             )
 
     def require_autostepper(self) -> str:
@@ -77,6 +81,7 @@ def load_config() -> Config:
         review_reminder_seconds=int(data.get("review_reminder_seconds", 300)),
         chart_timeout_seconds=int(data.get("chart_timeout_seconds", 1800)),
         yt_dlp_cookies_from_browser=data.get("yt_dlp_cookies_from_browser"),
+        spotify_redirect_uri=data.get("spotify_redirect_uri", "http://127.0.0.1:8899/callback"),
     )
 
     cfg.spotify_client_id = os.environ.get("SPOTIFY_CLIENT_ID", cfg.spotify_client_id)
@@ -96,6 +101,9 @@ def load_config() -> Config:
         cfg.chart_timeout_seconds = int(os.environ["CHART_TIMEOUT_SECONDS"])
     cfg.yt_dlp_cookies_from_browser = os.environ.get(
         "YT_DLP_COOKIES_FROM_BROWSER", cfg.yt_dlp_cookies_from_browser
+    )
+    cfg.spotify_redirect_uri = os.environ.get(
+        "SPOTIFY_REDIRECT_URI", cfg.spotify_redirect_uri
     )
 
     cfg.export_dir.mkdir(parents=True, exist_ok=True)

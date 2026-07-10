@@ -12,6 +12,7 @@ from typing import List, Optional
 from . import charting, matching, packaging, review_server, urls, youtube
 from .config import Config, ConfigError, load_config
 from .models import Song
+from .spotify_auth import SpotifyAuthError, get_user_access_token
 from .spotify_client import SpotifyClient, SpotifyError
 
 DOWNLOAD_DELAY_SECONDS = 3
@@ -59,7 +60,12 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
 
     elif kind == "spotify_playlist":
         cfg.require_spotify()
-        client = SpotifyClient(cfg.spotify_client_id, cfg.spotify_client_secret)
+        user_token = get_user_access_token(
+            cfg.spotify_client_id, cfg.spotify_client_secret, cfg.spotify_redirect_uri
+        )
+        client = SpotifyClient(
+            cfg.spotify_client_id, cfg.spotify_client_secret, user_access_token=user_token
+        )
         playlist_id = urls.spotify_id(link)
         group = client.get_playlist_name(playlist_id)
         for track in client.get_playlist_items(playlist_id):
@@ -196,6 +202,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         youtube.YtDlpFailure,
         youtube.YtDlpNotFoundError,
         SpotifyError,
+        SpotifyAuthError,
         ConfigError,
     ) as e:
         print(f"Error: {e}", file=sys.stderr)

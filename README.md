@@ -60,7 +60,7 @@ nano ~/.config/stepmania-auto-charter/config.json
 (`nano` is a simple terminal text editor — edit the values, then `Ctrl+O`, `Enter` to save, `Ctrl+X` to exit.)
 
 Fields in that file:
-- `spotify_client_id` / `spotify_client_secret` — from a free app at https://developer.spotify.com/dashboard (Dashboard → Create app → Settings shows both)
+- `spotify_client_id` / `spotify_client_secret` — from a free app at https://developer.spotify.com/dashboard (Dashboard → Create app → Settings shows both). **For Spotify playlist links**, also add `http://127.0.0.1:8899/callback` as a Redirect URI in that same app's Settings (must match `spotify_redirect_uri` below exactly) — Spotify now requires a real logged-in user to read playlist contents, so the first playlist run opens a one-time browser login; after that it's cached locally and you won't be asked again. Spotify track links don't need this.
 - `autostepper_path` — full path to the `Autostepper-Python` folder from step 7 (the one containing `AutoStepper.py`)
 - `autostepper_python` — full path to `Autostepper-Python/venv/bin/python` from step 7
 - `export_dir` — where finished song folders get saved; `~/StepMania Exports` is fine as-is
@@ -69,6 +69,7 @@ Fields in that file:
 - `review_reminder_seconds` — how often (seconds) to print a reminder if the review page is left open unconfirmed; `300` is fine as-is
 - `chart_timeout_seconds` — how long to wait for AutoStepper on one song before giving up; `1800` (30 min) is fine as-is, raise it if you see timeout failures on longer songs or slower Macs
 - `yt_dlp_cookies_from_browser` — optional; set to a browser name (e.g. `"chrome"`, `"safari"`, `"firefox"`) you're logged into YouTube with, to fix yt-dlp's `Sign in to confirm you're not a bot` error. Leave `""` unless you hit that error
+- `spotify_redirect_uri` — must exactly match the Redirect URI added to your Spotify app above; `http://127.0.0.1:8899/callback` is fine as-is unless that port is taken on your Mac
 
 **9. Verify the setup:**
 ```bash
@@ -113,6 +114,9 @@ python generate.py "https://open.spotify.com/playlist/..."
   song, then open a local review page. Nothing downloads until you click
   **Confirm & Continue**. Closing the tab without submitting doesn't hang
   forever — it prints periodic reminders with the URL to reopen.
+- Spotify **playlist** links open one extra one-time browser login (see
+  config setup above) before Phase 1 can list the playlist's tracks at all —
+  that's a separate step from the Phase 2 YouTube-match review page.
 - Output lands in `~/StepMania Exports/<Group>/<Song Title>/`, exactly two
   folders deep as StepMania's song wheel requires. Re-running a playlist
   later only processes songs that don't already have an output folder.

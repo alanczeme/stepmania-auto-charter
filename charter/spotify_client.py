@@ -1,9 +1,12 @@
-"""Minimal Spotify Web API client: metadata only, client-credentials auth.
+"""Minimal Spotify Web API client: metadata only, never touches audio.
 
-Uses the client-credentials OAuth flow (app-only, no user login, no elevated
-scopes) to call `search` / `get track` / `get playlist items`. This never
-touches actual audio -- Spotify's DRM stays untouched, which is why YouTube is
-the audio source for the rest of the pipeline.
+Track lookups use the client-credentials flow (app-only, no login). Playlist
+item reads need a real user token (see spotify_auth.py) as of Spotify's Feb
+2026 policy change, which restricted playlist contents to the authenticated
+user's own playlists regardless of client-credentials or public/private
+status. Either way this never touches actual audio -- Spotify's DRM stays
+untouched, which is why YouTube is the audio source for the rest of the
+pipeline.
 """
 from __future__ import annotations
 
@@ -21,11 +24,16 @@ class SpotifyError(Exception):
 
 
 class SpotifyClient:
-    def __init__(self, client_id: str, client_secret: str):
+    def __init__(self, client_id: str, client_secret: str, user_access_token: Optional[str] = None):
+        """`user_access_token`, if given, is used as-is (a real logged-in user
+        token from spotify_auth) instead of fetching a client-credentials
+        (app-only) token. Playlist item reads require a user token as of
+        Spotify's Feb 2026 policy change; track lookups don't.
+        """
         self.client_id = client_id
         self.client_secret = client_secret
-        self._token: Optional[str] = None
-        self._token_expires_at: float = 0.0
+        self._token: Optional[str] = user_access_token
+        self._token_expires_at: float = float("inf") if user_access_token else 0.0
 
     def _get_token(self) -> str:
         if self._token and time.time() < self._token_expires_at - 30:
@@ -57,13 +65,12 @@ class SpotifyClient:
             raise SpotifyError(f"Not found on Spotify: {url}")
         if resp.status_code == 403:
             raise SpotifyError(
-                f"Spotify refused access to {url} (403 Forbidden). This app uses "
-                "app-only auth (no user login), which can only read PUBLIC playlists. "
-                "This is most often either: a private/unlisted playlist -- open it on "
-                "Spotify, use the ••• menu, and make sure 'Make public' is checked -- "
-                "or one of Spotify's own algorithmic playlists (Discover Weekly, Daily "
-                "Mix, etc.), which block third-party API access entirely regardless of "
-                "visibility."
+                f"Spotify refused access to {url} (403 Forbidden). Playlist reads need "
+                "the logged-in user to actually own the playlist (or be a collaborator "
+                "on it) -- make sure you logged in as the account that owns this "
+                "playlist. One of Spotify's own algorithmic playlists (Discover Weekly, "
+                "Daily Mix, etc.) will also always 403 here; those block third-party "
+                "API access entirely."
             )
         if resp.status_code != 200:
             raise SpotifyError(f"Spotify API error {resp.status_code} for {url}: {resp.text}")
@@ -81,7 +88,7 @@ class SpotifyClient:
         return data.get("name") or "Spotify Playlist"
 
     def get_playlist_items(self, playlist_id: str) -> Iterator[dict]:
-        url = f"{API_BASE}/playlists/{playlist_id}/tracks"
+        url = f"{API_BASE}/playlists/{playlist_id}/items"
         params = {"limit": 100, "fields": "items(track(id,name,artists,duration_ms)),next"}
         while url:
             data = self._get_url(url, params=params)
