@@ -66,23 +66,44 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
         client = SpotifyClient(
             cfg.spotify_client_id, cfg.spotify_client_secret, user_access_token=user_token
         )
+        current_user = client.get_current_user()
+        print(f"Logged into Spotify as: {current_user['display_name']} ({current_user['id']})")
+
         playlist_id = urls.spotify_id(link)
         meta = client.get_playlist_meta(playlist_id)
         group = meta["name"]
+        owner_mismatch = (
+            meta["owner_id"] is not None and meta["owner_id"] != current_user["id"]
+        )
+        if owner_mismatch:
+            print(
+                f"Warning: '{meta['name']}' is owned by '{meta['owner_name']}' "
+                f"({meta['owner_id']}), not the logged-in account above. Playlist reads "
+                "need the owner (or a collaborator) logged in -- this will likely return 0 "
+                "tracks."
+            )
+
         track_count = 0
         for track in client.get_playlist_items(playlist_id):
             songs.append(_spotify_song(track, "spotify_playlist_item", group, cfg))
             track_count += 1
 
-        if track_count == 0 and meta["total_tracks"] > 0:
-            current_user = client.get_current_user()
+        if track_count == 0 and owner_mismatch:
             raise SpotifyError(
-                f"Spotify says '{meta['name']}' has {meta['total_tracks']} track(s), owned "
-                f"by '{meta['owner_name']}', but returned 0 tracks for the logged-in user "
-                f"('{current_user['display_name']}'). Playlist item reads are restricted to "
-                "the playlist's actual owner (or a collaborator) -- if that's not the "
-                f"account you meant to use, delete {TOKEN_CACHE_PATH} and rerun to log in "
-                "again as the right account."
+                f"'{meta['name']}' is owned by '{meta['owner_name']}', but you're logged in "
+                f"as '{current_user['display_name']}' -- that mismatch is why it returned 0 "
+                f"tracks. Delete {TOKEN_CACHE_PATH} and rerun to log in again as "
+                f"'{meta['owner_name']}'."
+            )
+        if track_count == 0:
+            raise SpotifyError(
+                f"'{meta['name']}' returned 0 tracks even though you're logged in as its "
+                "owner. Two likely causes: (1) the playlist is genuinely empty, or (2) this "
+                "Spotify app is still in \"Development Mode\", which restricts real API "
+                "access to users explicitly added on the app's dashboard -- go to "
+                "https://developer.spotify.com/dashboard, open this app, Settings -> User "
+                f"Management, and add '{current_user['display_name']}' "
+                f"({current_user['id']}) if it's not already listed."
             )
 
     return songs
