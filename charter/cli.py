@@ -138,7 +138,9 @@ def process_song(song: Song, cfg: Config, autostepper_script: str, workers: Opti
         final_target = target
         if final_target.exists():
             final_target = packaging.unique_target_dir(cfg.export_dir, song.group, song.title)
-        packaging.package(chart_folder, final_target, song.resolved_thumbnail())
+        packaging.package(
+            chart_folder, final_target, song.resolved_thumbnail(), song.title, song.artist
+        )
         if cfg.stepmania_songs_dir:
             packaging.mirror_to_stepmania(final_target, song.group, cfg.stepmania_songs_dir)
         song.status = "packaged"
