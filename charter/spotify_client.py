@@ -10,6 +10,7 @@ pipeline.
 """
 from __future__ import annotations
 
+import json
 import time
 from typing import Iterator, Optional
 
@@ -101,17 +102,41 @@ class SpotifyClient:
         }
 
     def get_playlist_items(self, playlist_id: str) -> Iterator[dict]:
-        url = f"{API_BASE}/playlists/{playlist_id}/items"
-        params = {"limit": 100, "fields": "items(track(id,name,artists,duration_ms)),next"}
-        while url:
-            data = self._get_url(url, params=params)
-            for item in data.get("items", []):
+        fields = "items(track(id,name,artists,duration_ms)),next"
+        first_page = self._get(
+            f"/playlists/{playlist_id}/items", params={"limit": 100, "fields": fields}
+        )
+        if not first_page.get("items"):
+            # /items is a Feb 2026 rename of /tracks I couldn't independently verify
+            # against Spotify's own docs (blocked from this environment) -- if it comes
+            # back empty, fall back to the endpoint that's been stable for years rather
+            # than assume the playlist is actually empty.
+            first_page = self._get(
+                f"/playlists/{playlist_id}/tracks", params={"limit": 100, "fields": fields}
+            )
+
+        url = None
+        page = first_page
+        while True:
+            for item in page.get("items", []):
                 track = item.get("track")
                 if not track or not track.get("id"):
                     continue  # local files / removed tracks have no id
                 yield _track_summary(track)
-            url = data.get("next")
-            params = None  # `next` already carries its own query string
+            url = page.get("next")
+            if not url:
+                return
+            page = self._get_url(url)
+
+    def debug_raw_items_page(self, playlist_id: str) -> str:
+        """Unfiltered dump of the first items page, for diagnosing an
+        unexpected-empty-result situation the classified error paths didn't
+        already explain (e.g. a wrong endpoint/fields assumption)."""
+        try:
+            data = self._get(f"/playlists/{playlist_id}/items", params={"limit": 3})
+            return f"/items response: {json.dumps(data)[:1500]}"
+        except SpotifyError as e:
+            return f"/items request itself failed: {e}"
 
 
 def _track_summary(track: dict) -> dict:

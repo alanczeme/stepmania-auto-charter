@@ -103,14 +103,15 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
                 f"'{meta['owner_name']}'."
             )
         if track_count == 0:
+            raw = client.debug_raw_items_page(playlist_id)
             raise SpotifyError(
                 f"'{meta['name']}' returned 0 tracks even though you're logged in as its "
-                "owner. Two likely causes: (1) the playlist is genuinely empty, or (2) this "
-                "Spotify app is still in \"Development Mode\", which restricts real API "
-                "access to users explicitly added on the app's dashboard -- go to "
-                "https://developer.spotify.com/dashboard, open this app, Settings -> User "
-                f"Management, and add '{current_user['display_name']}' "
-                f"({current_user['id']}) if it's not already listed."
+                f"owner and Spotify reports {meta['total_tracks']} track(s) on it. This "
+                "isn't matching any cause I can already explain -- if you've already "
+                "confirmed the app isn't stuck in Development Mode (Settings -> User "
+                f"Management on https://developer.spotify.com/dashboard has "
+                f"'{current_user['display_name']}' listed), this is the raw API response "
+                f"for debugging:\n{raw}"
             )
 
     return songs
