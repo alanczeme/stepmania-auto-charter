@@ -55,6 +55,16 @@ class SpotifyClient:
         )
         if resp.status_code == 404:
             raise SpotifyError(f"Not found on Spotify: {url}")
+        if resp.status_code == 403:
+            raise SpotifyError(
+                f"Spotify refused access to {url} (403 Forbidden). This app uses "
+                "app-only auth (no user login), which can only read PUBLIC playlists. "
+                "This is most often either: a private/unlisted playlist -- open it on "
+                "Spotify, use the ••• menu, and make sure 'Make public' is checked -- "
+                "or one of Spotify's own algorithmic playlists (Discover Weekly, Daily "
+                "Mix, etc.), which block third-party API access entirely regardless of "
+                "visibility."
+            )
         if resp.status_code != 200:
             raise SpotifyError(f"Spotify API error {resp.status_code} for {url}: {resp.text}")
         return resp.json()
