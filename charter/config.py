@@ -28,6 +28,7 @@ class Config:
     review_port: int = 0
     review_reminder_seconds: int = 300
     chart_timeout_seconds: int = 1800
+    yt_dlp_cookies_from_browser: Optional[str] = None
 
     def require_spotify(self) -> None:
         if not self.spotify_client_id or not self.spotify_client_secret:
@@ -75,6 +76,7 @@ def load_config() -> Config:
         review_port=int(data.get("review_port", 0)),
         review_reminder_seconds=int(data.get("review_reminder_seconds", 300)),
         chart_timeout_seconds=int(data.get("chart_timeout_seconds", 1800)),
+        yt_dlp_cookies_from_browser=data.get("yt_dlp_cookies_from_browser"),
     )
 
     cfg.spotify_client_id = os.environ.get("SPOTIFY_CLIENT_ID", cfg.spotify_client_id)
@@ -92,6 +94,9 @@ def load_config() -> Config:
     )
     if os.environ.get("CHART_TIMEOUT_SECONDS"):
         cfg.chart_timeout_seconds = int(os.environ["CHART_TIMEOUT_SECONDS"])
+    cfg.yt_dlp_cookies_from_browser = os.environ.get(
+        "YT_DLP_COOKIES_FROM_BROWSER", cfg.yt_dlp_cookies_from_browser
+    )
 
     cfg.export_dir.mkdir(parents=True, exist_ok=True)
     return cfg

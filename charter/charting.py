@@ -55,12 +55,23 @@ def generate_chart(
         "generate",
         f"--input={in_dir}",
         f"--output={out_dir}",
+        # AutoStepper prompts interactively ("Use full length? [y]/[a]/[n]")
+        # for any song longer than --duration. We always want the full song
+        # charted and never want an unattended run blocked on stdin, so set
+        # this comfortably above any real track length.
+        "--duration=36000",
     ]
     if workers is not None:
         cmd.append(f"--workers={workers}")
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            stdin=subprocess.DEVNULL,
+        )
     except subprocess.TimeoutExpired as e:
         shutil.rmtree(scratch_dir, ignore_errors=True)
         tail = _tail(e.stdout) or _tail(e.stderr) or "(no output captured)"

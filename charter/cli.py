@@ -23,7 +23,7 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
     songs: List[Song] = []
 
     if kind == "youtube_video":
-        info = youtube.get_video_info(link)
+        info = youtube.get_video_info(link, cookies_from_browser=cfg.yt_dlp_cookies_from_browser)
         songs.append(
             Song(
                 source="youtube_video",
@@ -35,7 +35,9 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
         )
 
     elif kind == "youtube_playlist":
-        playlist_title, videos = youtube.list_playlist_videos(link)
+        playlist_title, videos = youtube.list_playlist_videos(
+            link, cookies_from_browser=cfg.yt_dlp_cookies_from_browser
+        )
         group = playlist_title
         for v in videos:
             songs.append(
@@ -52,7 +54,7 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
         cfg.require_spotify()
         client = SpotifyClient(cfg.spotify_client_id, cfg.spotify_client_secret)
         track = client.get_track(urls.spotify_id(link))
-        song = _spotify_song(track, "spotify_track", "Singles")
+        song = _spotify_song(track, "spotify_track", "Singles", cfg)
         songs.append(song)
 
     elif kind == "spotify_playlist":
@@ -61,12 +63,12 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
         playlist_id = urls.spotify_id(link)
         group = client.get_playlist_name(playlist_id)
         for track in client.get_playlist_items(playlist_id):
-            songs.append(_spotify_song(track, "spotify_playlist_item", group))
+            songs.append(_spotify_song(track, "spotify_playlist_item", group, cfg))
 
     return songs
 
 
-def _spotify_song(track: dict, source: str, group: str) -> Song:
+def _spotify_song(track: dict, source: str, group: str, cfg: Config) -> Song:
     song = Song(
         source=source,
         title=track["title"],
@@ -76,7 +78,9 @@ def _spotify_song(track: dict, source: str, group: str) -> Song:
     )
     try:
         raw = youtube.search_candidates(
-            f"{song.artist} {song.title}", limit=SEARCH_RESULTS_PER_SONG
+            f"{song.artist} {song.title}",
+            limit=SEARCH_RESULTS_PER_SONG,
+            cookies_from_browser=cfg.yt_dlp_cookies_from_browser,
         )
         song.candidates = matching.rank_candidates(song.known_duration, raw)
     except (youtube.YtDlpFailure, youtube.YtDlpNotFoundError) as e:
@@ -97,7 +101,13 @@ def process_song(song: Song, cfg: Config, autostepper_script: str, workers: Opti
     scratch_dir: Optional[Path] = None
     try:
         try:
-            audio_path = Path(youtube.download_audio(song.youtube_url, str(work_dir / "audio")))
+            audio_path = Path(
+                youtube.download_audio(
+                    song.youtube_url,
+                    str(work_dir / "audio"),
+                    cookies_from_browser=cfg.yt_dlp_cookies_from_browser,
+                )
+            )
         except (youtube.VideoUnavailableError, youtube.YtDlpFailure, youtube.YtDlpNotFoundError) as e:
             song.status, song.error = "failed", str(e)
             print(f"  FAILED (download): {e}")

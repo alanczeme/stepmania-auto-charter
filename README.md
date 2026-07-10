@@ -68,6 +68,7 @@ Fields in that file:
 - `review_port` — local port for the Phase 2 review page; `0` auto-picks a free port, leave as-is
 - `review_reminder_seconds` — how often (seconds) to print a reminder if the review page is left open unconfirmed; `300` is fine as-is
 - `chart_timeout_seconds` — how long to wait for AutoStepper on one song before giving up; `1800` (30 min) is fine as-is, raise it if you see timeout failures on longer songs or slower Macs
+- `yt_dlp_cookies_from_browser` — optional; set to a browser name (e.g. `"chrome"`, `"safari"`, `"firefox"`) you're logged into YouTube with, to fix yt-dlp's `Sign in to confirm you're not a bot` error. Leave `""` unless you hit that error
 
 **9. Verify the setup:**
 ```bash
