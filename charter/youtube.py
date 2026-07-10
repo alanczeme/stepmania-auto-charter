@@ -93,6 +93,7 @@ def get_video_info(url: str, cookies_from_browser: Optional[str] = None) -> dict
         "duration": data.get("duration"),
         "thumbnail": data.get("thumbnail", ""),
         "url": data.get("webpage_url", url),
+        "channel": data.get("channel") or data.get("uploader") or "",
     }
 
 
@@ -116,6 +117,7 @@ def list_playlist_videos(
                 "title": entry.get("title") or f"Unknown ({video_id})",
                 "url": entry.get("url") or f"https://www.youtube.com/watch?v={video_id}",
                 "thumbnail": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else "",
+                "channel": entry.get("channel") or entry.get("uploader") or "",
             }
         )
     playlist_title = data.get("title") or "Playlist"

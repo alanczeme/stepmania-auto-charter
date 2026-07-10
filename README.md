@@ -108,15 +108,20 @@ python generate.py "https://open.spotify.com/track/..."
 python generate.py "https://open.spotify.com/playlist/..."
 ```
 
-- YouTube links (video or playlist) go straight to the download queue — no
-  review step, since there's nothing to match.
-- Spotify links search YouTube for the top 2 duration-matched candidates per
-  song, then open a local review page. Nothing downloads until you click
-  **Confirm & Continue**. Closing the tab without submitting doesn't hang
-  forever — it prints periodic reminders with the URL to reopen.
+- Every song, regardless of source, goes through a local review page before
+  anything downloads. YouTube video titles are cleaned up and split into a
+  best-guess title/artist (stripping things like "(Official Video)", trying
+  "Artist - Title" splits, falling back to the channel name as artist) --
+  editable, not authoritative, since YouTube titles are often wrong or
+  incomplete. Nothing downloads until you click **Confirm & Continue**.
+  Closing the tab without submitting doesn't hang forever — it prints
+  periodic reminders with the URL to reopen.
+- Spotify-sourced songs additionally search YouTube for the top 2
+  duration-matched candidates and show a picker (or an auto-skip note if
+  none were found) right there in the same review page.
 - Spotify **playlist** links open one extra one-time browser login (see
   config setup above) before Phase 1 can list the playlist's tracks at all —
-  that's a separate step from the Phase 2 YouTube-match review page.
+  that's a separate step from the Phase 2 review page.
 - Output lands in `~/StepMania Exports/<Group>/<Song Title>/`, exactly two
   folders deep as StepMania's song wheel requires. Re-running a playlist
   later only processes songs that don't already have an output folder.

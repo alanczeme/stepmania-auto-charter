@@ -14,6 +14,7 @@ from .config import Config, ConfigError, load_config
 from .models import Song
 from .spotify_auth import TOKEN_CACHE_PATH, SpotifyAuthError, get_user_access_token
 from .spotify_client import SpotifyClient, SpotifyError
+from .title_guess import guess_artist_title
 
 DOWNLOAD_DELAY_SECONDS = 3
 SEARCH_RESULTS_PER_SONG = 5
@@ -25,10 +26,13 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
 
     if kind == "youtube_video":
         info = youtube.get_video_info(link, cookies_from_browser=cfg.yt_dlp_cookies_from_browser)
+        artist, title = guess_artist_title(info["title"], info["channel"])
         songs.append(
             Song(
                 source="youtube_video",
-                title=info["title"],
+                title=title,
+                raw_title=info["title"],
+                artist=artist,
                 group="Singles",
                 youtube_url=info["url"],
                 thumbnail=info["thumbnail"],
@@ -41,10 +45,13 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
         )
         group = playlist_title
         for v in videos:
+            artist, title = guess_artist_title(v["title"], v["channel"])
             songs.append(
                 Song(
                     source="youtube_playlist_item",
-                    title=v["title"],
+                    title=title,
+                    raw_title=v["title"],
+                    artist=artist,
                     group=group,
                     youtube_url=v["url"],
                     thumbnail=v["thumbnail"],

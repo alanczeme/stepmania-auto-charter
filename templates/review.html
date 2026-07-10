@@ -18,6 +18,10 @@
   .duration-match { color: #1a7f37; font-weight: 600; }
   .duration-mismatch { color: #a15c00; }
   .skip-note { color: #a30000; font-style: italic; }
+  .fields { display: flex; gap: 1rem; flex-wrap: wrap; margin: 0.5rem 0; align-items: flex-end; }
+  label.field { display: flex; flex-direction: column; font-size: 0.85rem; color: #555; gap: 0.2rem; flex: 1 1 220px; }
+  label.field input[type=text] { font-size: 0.95rem; padding: 0.4rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
+  .origin-note { flex-basis: 100%; font-size: 0.8rem; color: #888; font-style: italic; }
   label.choice { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; cursor: pointer; }
   .actions { position: sticky; bottom: 0; background: white; padding: 1rem 0; border-top: 1px solid #ddd; }
   button#confirm { font-size: 1rem; padding: 0.6rem 1.2rem; cursor: pointer; }
@@ -26,8 +30,8 @@
 </style>
 </head>
 <body>
-<h1>Review YouTube matches</h1>
-<p>{{COUNT}} song(s) sourced from Spotify need a match confirmed before downloading starts. Listen, pick a candidate, or skip.</p>
+<h1>Review songs</h1>
+<p>{{COUNT}} song(s) queued. Confirm or fix each title/artist below -- YouTube video titles and Spotify-sourced matches aren't always exactly right. Nothing downloads until you click Confirm &amp; Continue.</p>
 <form id="review-form">
 {{ROWS}}
 <div class="actions">
@@ -41,6 +45,9 @@ document.getElementById('review-form').addEventListener('submit', function (ev) 
   var data = {};
   document.querySelectorAll('input[type=radio]:checked').forEach(function (r) {
     data[r.name] = r.value;
+  });
+  document.querySelectorAll('input[type=text]').forEach(function (t) {
+    data[t.name] = t.value;
   });
   var statusEl = document.getElementById('status');
   statusEl.textContent = 'Submitting...';

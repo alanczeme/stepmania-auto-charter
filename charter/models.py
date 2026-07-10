@@ -25,6 +25,7 @@ class Song:
     group: str  # target Songs/<group>/ name
     artist: Optional[str] = None
     known_duration: Optional[int] = None  # spotify duration in seconds, if known
+    raw_title: Optional[str] = None  # original YouTube video title, before cleanup guessing
 
     # Direct YouTube sources skip straight to the queue.
     youtube_url: Optional[str] = None

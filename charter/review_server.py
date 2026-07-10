@@ -1,6 +1,8 @@
 """Phase 2: a throwaway local web server that blocks until the user confirms
-YouTube matches for every Spotify-sourced song. No account, no persistence --
-the server is torn down the moment Confirm & Continue is received.
+every song's title/artist (and, for Spotify-sourced songs, its YouTube
+match) before any downloading or charting starts. No account, no
+persistence -- the server is torn down the moment Confirm & Continue is
+received.
 """
 from __future__ import annotations
 
@@ -43,13 +45,42 @@ def _render_candidate(idx: int, cand_num: int, cand) -> str:
     </div>"""
 
 
+def _render_title_artist_fields(idx: int, song: Song) -> str:
+    origin_note = ""
+    if song.raw_title and song.raw_title != song.title:
+        origin_note = f'<div class="origin-note">from: {html.escape(song.raw_title)}</div>'
+    return f"""
+  <div class="fields">
+    <label class="field">
+      Title
+      <input type="text" name="title_{idx}" value="{html.escape(song.title)}">
+    </label>
+    <label class="field">
+      Artist
+      <input type="text" name="artist_{idx}" value="{html.escape(song.artist or '')}"
+             placeholder="(unknown)">
+    </label>
+    {origin_note}
+  </div>"""
+
+
 def _render_song(idx: int, song: Song) -> str:
+    fields_html = _render_title_artist_fields(idx, song)
+
+    if not song.needs_review():
+        return f"""
+<div class="song">
+  <h2>{html.escape(song.title)}</h2>
+  {fields_html}
+</div>"""
+
     meta = f"{html.escape(song.artist or '')} &middot; {_fmt_duration(song.known_duration)}"
     if not song.candidates:
         return f"""
 <div class="song auto-skipped">
   <h2>{html.escape(song.title)}</h2>
   <div class="spotify-meta">{meta}</div>
+  {fields_html}
   <p class="skip-note">No YouTube candidates found &mdash; auto-skipped.</p>
 </div>"""
 
@@ -60,6 +91,7 @@ def _render_song(idx: int, song: Song) -> str:
 <div class="song">
   <h2>{html.escape(song.title)}</h2>
   <div class="spotify-meta">{meta}</div>
+  {fields_html}
   <div class="candidates">{candidate_html}</div>
   <label class="choice">
     <input type="radio" name="song_{idx}" value="skip">
@@ -69,22 +101,21 @@ def _render_song(idx: int, song: Song) -> str:
 
 
 def run_review(songs: List[Song], port: int = 0, reminder_seconds: int = 300) -> None:
-    """Show the review page and block until submitted. Mutates `song.chosen` in place."""
-    review_songs = [s for s in songs if s.needs_review()]
-    if not review_songs:
+    """Show the review page and block until submitted.
+
+    Mutates every song's `title`/`artist` from the submitted form values, and
+    `chosen` for Spotify-sourced songs that needed a YouTube match picked.
+    """
+    if not songs:
         return
 
-    for s in review_songs:
-        if not s.candidates:
+    for s in songs:
+        if s.needs_review() and not s.candidates:
             s.chosen = "skip"
 
-    pending = [(idx, s) for idx, s in enumerate(review_songs) if s.candidates]
-    if not pending:
-        return  # everything was auto-skipped, nothing to actually review
-
-    rows = "".join(_render_song(idx, s) for idx, s in enumerate(review_songs))
+    rows = "".join(_render_song(idx, s) for idx, s in enumerate(songs))
     template = TEMPLATE_PATH.read_text()
-    page = template.replace("{{COUNT}}", str(len(pending))).replace("{{ROWS}}", rows)
+    page = template.replace("{{COUNT}}", str(len(songs))).replace("{{ROWS}}", rows)
     page_bytes = page.encode("utf-8")
 
     done = threading.Event()
@@ -133,7 +164,7 @@ def run_review(songs: List[Song], port: int = 0, reminder_seconds: int = 300) ->
     thread.start()
 
     print(f"\nOpening review page in your browser: {url}")
-    print(f"{len(pending)} song(s) need confirmation. Click 'Confirm & Continue' when done.\n")
+    print(f"{len(songs)} song(s) to confirm. Click 'Confirm & Continue' when done.\n")
     webbrowser.open(url)
 
     waited = 0
@@ -147,5 +178,12 @@ def run_review(songs: List[Song], port: int = 0, reminder_seconds: int = 300) ->
     server.shutdown()
     server.server_close()
 
-    for idx, song in pending:
-        song.chosen = decisions.get(f"song_{idx}", "skip")
+    for idx, song in enumerate(songs):
+        title = decisions.get(f"title_{idx}", "").strip()
+        if title:
+            song.title = title
+        artist = decisions.get(f"artist_{idx}", "").strip()
+        song.artist = artist or None
+
+        if song.needs_review() and song.candidates:
+            song.chosen = decisions.get(f"song_{idx}", "skip")
