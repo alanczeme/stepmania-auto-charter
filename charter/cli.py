@@ -12,7 +12,7 @@ from typing import List, Optional
 from . import charting, matching, packaging, review_server, urls, youtube
 from .config import Config, ConfigError, load_config
 from .models import Song
-from .spotify_auth import SpotifyAuthError, get_user_access_token
+from .spotify_auth import TOKEN_CACHE_PATH, SpotifyAuthError, get_user_access_token
 from .spotify_client import SpotifyClient, SpotifyError
 
 DOWNLOAD_DELAY_SECONDS = 3
@@ -67,9 +67,23 @@ def build_queue(link: str, cfg: Config) -> List[Song]:
             cfg.spotify_client_id, cfg.spotify_client_secret, user_access_token=user_token
         )
         playlist_id = urls.spotify_id(link)
-        group = client.get_playlist_name(playlist_id)
+        meta = client.get_playlist_meta(playlist_id)
+        group = meta["name"]
+        track_count = 0
         for track in client.get_playlist_items(playlist_id):
             songs.append(_spotify_song(track, "spotify_playlist_item", group, cfg))
+            track_count += 1
+
+        if track_count == 0 and meta["total_tracks"] > 0:
+            current_user = client.get_current_user()
+            raise SpotifyError(
+                f"Spotify says '{meta['name']}' has {meta['total_tracks']} track(s), owned "
+                f"by '{meta['owner_name']}', but returned 0 tracks for the logged-in user "
+                f"('{current_user['display_name']}'). Playlist item reads are restricted to "
+                "the playlist's actual owner (or a collaborator) -- if that's not the "
+                f"account you meant to use, delete {TOKEN_CACHE_PATH} and rerun to log in "
+                "again as the right account."
+            )
 
     return songs
 

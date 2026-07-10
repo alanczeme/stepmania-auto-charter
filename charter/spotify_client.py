@@ -83,9 +83,22 @@ class SpotifyClient:
         data = self._get(f"/tracks/{track_id}")
         return _track_summary(data)
 
-    def get_playlist_name(self, playlist_id: str) -> str:
-        data = self._get(f"/playlists/{playlist_id}", params={"fields": "name"})
-        return data.get("name") or "Spotify Playlist"
+    def get_current_user(self) -> dict:
+        data = self._get("/me")
+        return {"id": data.get("id"), "display_name": data.get("display_name") or data.get("id")}
+
+    def get_playlist_meta(self, playlist_id: str) -> dict:
+        data = self._get(
+            f"/playlists/{playlist_id}",
+            params={"fields": "name,owner.id,owner.display_name,tracks.total"},
+        )
+        owner = data.get("owner") or {}
+        return {
+            "name": data.get("name") or "Spotify Playlist",
+            "owner_id": owner.get("id"),
+            "owner_name": owner.get("display_name") or owner.get("id") or "unknown",
+            "total_tracks": (data.get("tracks") or {}).get("total", 0),
+        }
 
     def get_playlist_items(self, playlist_id: str) -> Iterator[dict]:
         url = f"{API_BASE}/playlists/{playlist_id}/items"
